@@ -1,0 +1,57 @@
+---
+
+- hosts: lunanode 
+  become: true
+  remote_user: centos
+  become_method: sudo
+  become_user: root
+  tasks:
+    - name: Install require packages 
+      become: true
+      become_user: root
+      yum: name={{item}} state=present update_cache=yes
+      with_items:
+        - git 
+        - wget
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+    - name: Add docker repo
+      command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    - name: Add ce edge
+      command:  yum-config-manager --enable docker-ce-edge
+    - name: Add ce test
+      command:  yum-config-manager --enable docker-ce-test
+    - name: Add docker package
+      yum: name=docker-ce state=present update_cache=yes
+    - name: Change docker.service 
+      lineinfile: dest=/usr/lib/systemd/system/docker.service
+         state=present
+         regexp='ExecStart=/usr/bin/dockerd'
+         line='ExecStart=/usr/bin/dockerd --insecure-registry 172.30.0.0/16'
+         backup=yes
+    - name: set docker daemon 
+      command: systemctl enable docker
+    - name: start docker daemon 
+      command: systemctl start docker
+    - name: set default user in docker group 
+      command: usermod -aG docker centos 
+    - name: Install epel 
+      yum: name=epel-release state=present update_cache=yes
+    - name: install python pip
+      yum: name=python-pip state=present update_cache=yes 
+    - name: Install docker compose
+      command:  pip install docker-compose
+    - name: Install pyopenssl and other
+      command:  pip install pyopenssl ndg-httpsclient pyasn1
+    - name: Update urllib3
+      command: pip install -U urllib3
+    - name: download and untar openshift
+      unarchive: 
+        src: "https://github.com/openshift/origin/releases/download/v3.6.1/openshift-origin-server-v3.6.1-008f2d5-linux-64bit.tar.gz"
+        copy: no
+        dest: "/tmp"
+    - name: move openshift to usr/local/bin
+      shell : mv k* o* /usr/local/sbin/
+      args:
+        chdir: /tmp/openshift-origin-server-v3.6.1-008f2d5-linux-64bit
