@@ -38,6 +38,12 @@
       command: usermod -aG docker centos 
     - name: Install epel 
       yum: name=epel-release state=present update_cache=yes
+    - name:  install monitoring
+      yum: name={{item}} state=present update_cache=yes
+      with_items:
+        - htop
+        - iotop
+        - iftop
     - name: install python pip
       yum: name=python-pip state=present update_cache=yes 
     - name: Install docker compose
@@ -51,7 +57,9 @@
         src: "https://github.com/openshift/origin/releases/download/v3.6.1/openshift-origin-server-v3.6.1-008f2d5-linux-64bit.tar.gz"
         copy: no
         dest: "/tmp"
-    - name: move openshift to usr/local/bin
-      shell : mv k* o* /usr/local/sbin/
+    - name: move openshift to usr/local/sbin
+      shell: mv k* o* /usr/local/sbin/
       args:
         chdir: /tmp/openshift-origin-server-v3.6.1-008f2d5-linux-64bit
+    - name: start cluster
+      command: /usr/local/sbin/oc cluster up --public-hostname={{ ansible_eth0.ipv4.address }} 
